@@ -1,27 +1,20 @@
 
 import axios from 'axios'
 
-import React, { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import PaymentsOptionsItemButton from './PaymentsOptionsItemButton'
-import { useAccordionState } from './service'
 import './index.css'
 
 import { baseURL } from 'services/Anypay/api'
 
-import PaymentRelayService from 'services/PaymentRelay'
-import PaymentMoneybuttonService from 'services/PaymentMoneybutton'
 import { PaymentsComponentContext } from 'components/Payments/context'
-//import QRCode from 'react-qr-code'
 
 import Select from 'react-select';
 
 import detectEthereumProvider from '@metamask/detect-provider';
 
-import Web3 from 'web3'
+import { Web3 } from 'web3';
 
-import SolanaWeb3 from '@solana/web3.js'
-
-import { PublicKey, SystemProgram  } from '@solana/web3.js'
 
 type CoinInfo = {
   wallets: string[];
@@ -44,65 +37,25 @@ type SelectorOption = {
   isDisabled: boolean;
 };
 
-const ChainIDs = {
-
-}
-
-const ChainTokens = {
-  "MATIC": {
-    "id": "",
-    "USDC": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-    "USDT": ""
-  },
-  "AVAX": {
-    "id": "",
-    "USDC": "",
-    "USDT": ""
-  },
-  "ETH": {
-    "id": "",
-    "USDC": "",
-    "USDT": ""
-  },
-  "SOL": {
-    "id": "",
-    "USDC": "",
-    "USDT": ""
-  }
-}
-
 function PaymentsOptionsComponent({ paymentOptions }: any) {
   const anypay = useContext(PaymentsComponentContext)
-  const preExpanded = ['payment-relay']
-  const accordionState = useAccordionState({ preExpanded })
 
-  const paymentURL = anypay.state.invoice.uri.split("r=")[1]
+  const [currencies] = useState(paymentOptions.map((o:any) => o.currency || o.chain))
 
-  const [currencies, setCurrencies] = useState(paymentOptions.map((o:any) => o.currency || o.chain))
+  const [maticOption] = useState(paymentOptions.find((o:any) => o.chain === 'MATIC' && o.currency === 'MATIC'))
+  const [maticUSDCPaymentRequest] = useState(paymentOptions.find((o:any) => o.chain === 'MATIC' && o.currency === 'USDC'))
+  const [maticUSDTPaymentRequest] = useState(paymentOptions.find((o:any) => o.chain === 'MATIC' && o.currency === 'USDT'))
 
-  const [bsvOption, setBsvOption] = useState<any>(paymentOptions.find((o:any) => o.chain === 'BSV'))
+  const [avalancheOption] = useState(paymentOptions.find((o:any) => o.chain === 'AVAX' && o.currency === 'AVAX'))
+  const [avalancheUSDCPaymentRequest] = useState(paymentOptions.find((o:any) => o.chain === 'AVAX' && o.currency === 'USDC'))
+  const [avalancheUSDTPaymentRequest] = useState(paymentOptions.find((o:any) => o.chain === 'AVAX' && o.currency === 'USDT'))
 
-  const [maticOption, setMaticOption] = useState(paymentOptions.find((o:any) => o.chain === 'MATIC' && o.currency === 'MATIC'))
-  const [maticUSDCPaymentRequest, setMaticUSDCPaymentRequest] = useState(paymentOptions.find((o:any) => o.chain === 'MATIC' && o.currency === 'USDC'))
-  const [maticUSDTPaymentRequest, setMaticUSDTPaymentRequest] = useState(paymentOptions.find((o:any) => o.chain === 'MATIC' && o.currency === 'USDT'))
-
-  const [avalancheOption, setAvalancheOption] = useState(paymentOptions.find((o:any) => o.chain === 'AVAX' && o.currency === 'AVAX'))
-  const [avalancheUSDCPaymentRequest, setAvalancheUSDCPaymentRequest] = useState(paymentOptions.find((o:any) => o.chain === 'AVAX' && o.currency === 'USDC'))
-  const [avalancheUSDTPaymentRequest, setAvalancheUSDTPaymentRequest] = useState(paymentOptions.find((o:any) => o.chain === 'AVAX' && o.currency === 'USDT'))
-
-  const [ethereumOption, setEthereum] = useState(paymentOptions.find((o:any) => o.chain === 'ETH' && o.currency === 'ETH'))
-  const [ethUSDCPaymentRequest, setEthUSDCPaymentRequest] = useState(paymentOptions.find((o:any) => o.chain === 'ETH' && o.currency === 'USDC'))
-  const [ethUSDTPaymentRequest, setEthUSDTPaymentRequest] = useState(paymentOptions.find((o:any) => o.chain === 'ETH' && o.currency === 'USDT'))
-
-  const [solanaOption, setSolanaOption] = useState(paymentOptions.find((o:any) => o.chain === 'SOL')) // TODO: Fix USDC->MATIC for chain
+  const [ethereumOption] = useState(paymentOptions.find((o:any) => o.chain === 'ETH' && o.currency === 'ETH'))
+  const [ethUSDCPaymentRequest] = useState(paymentOptions.find((o:any) => o.chain === 'ETH' && o.currency === 'USDC'))
+  const [ethUSDTPaymentRequest] = useState(paymentOptions.find((o:any) => o.chain === 'ETH' && o.currency === 'USDT'))
 
   const [provider, setProvider] = useState<any>(null)
-  const [metamaskConnected, setMetamaskConnected] = useState<boolean>(false)
   const [metamaskAccount, setMetamaskAccount] = useState<string | null>(null)
-
-  const [web3, setWeb3] = useState()
-
-  console.log('ETHEREUM OPTION', ethereumOption)
 
   const networkMap: any = {
     POLYGON_MAINNET: {
@@ -134,11 +87,6 @@ function PaymentsOptionsComponent({ paymentOptions }: any) {
       blockExplorerUrls: ["https://mumbai.polygonscan.com/"],
     },
   };
-
-  const SPL_TOKENS = {
-    'USDC': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-    'USDT': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
-  }  
 
   const supportedCoins:SupportedCoinsArray = {
     AVAX: { // Avalanche
@@ -294,7 +242,7 @@ const [selectedCoin, setSelectedCoin] = useState(defaultSelectorOption.value);
 
         setMetamaskAccount(account)
 
-      })
+      }).catch(console.error)
 
       
     }
@@ -334,8 +282,6 @@ const [selectedCoin, setSelectedCoin] = useState(defaultSelectorOption.value);
 
   async function payMATICMetamask() {
 
-    let _web3 = new Web3(provider)
-
     await ensureChain('POLYGON_MAINNET')
 
     const { address, amount } = maticOption.instructions[0].outputs[0]
@@ -346,13 +292,9 @@ const [selectedCoin, setSelectedCoin] = useState(defaultSelectorOption.value);
 
   async function payAVAXMetamask() {
 
-    let _web3 = new Web3(provider)
-
     await ensureChain('AVALANCHE_MAINNET')
 
     const { address, amount } = avalancheOption.instructions[0].outputs[0]
-
-    console.log("PAY AVAX", { address, amount })
 
     return payETH({address, amount, chain: 'AVAX'})
 
@@ -360,13 +302,9 @@ const [selectedCoin, setSelectedCoin] = useState(defaultSelectorOption.value);
 
   async function payETHMetamask() {
 
-    let _web3 = new Web3(provider)
-
     await ensureChain('ETHEREUM_MAINNET')
 
     const { address, amount } = ethereumOption.instructions[0].outputs[0]
-
-    console.log("pay eth metamask", { address, amount })
 
     return payETH({address, amount, chain: 'ETH'})
  
@@ -397,8 +335,6 @@ const [selectedCoin, setSelectedCoin] = useState(defaultSelectorOption.value);
 
   async function payEthereumUSDCMetamask() {
 
-    console.log('payEthereumUSDCMetamask')
-
     const token = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
 
     await ensureChain('ETHEREUM_MAINNET')
@@ -420,93 +356,19 @@ const [selectedCoin, setSelectedCoin] = useState(defaultSelectorOption.value);
 
   }
 
-  const getProvider = () => {
-    if ('phantom' in window) {
-      //@ts-ignore
-      const provider = window.phantom?.solana;
-  
-      if (provider?.isPhantom) {
-        return provider;
-      }
-    }
-  
-    window.open('https://phantom.app/', '_blank');
-  };
-
-  async function phantomSolanaPayUSDC() {
-    
-    const sender = "Ef9ca7Uwkw9rrbdaWnUrrdMZJqPYykZ1dPLEv9yMpEjB"
-
-    const provider = getProvider(); // see "Detecting the Provider"
-    try {
-        const connection = await provider.connect();
-        console.log(connection.publicKey.toString());
-        // 26qv4GCcx98RihuK3c4T6ozB3J7L6VwCuFVc7Ta2A3Uo 
-
-        //const transaction = new provider.Transaction();
-
-        //const signedTransaction = await provider.signTransaction(transaction);
-
-        //console.log({ signedTransaction })
-
-        // create array of instructions
-        /*const instructions = [
-          SystemProgram.transfer({
-            fromPubkey: new PublicKey(sender),
-            toPubkey: new PublicKey("GeKcUd7Ftqhyyvf2zE9JNx5bud5N7QvUBnBQkYWwRnHg"),
-            lamports: 10,
-          }),
-        ];*/
-
-
-        /*let conn = new SolanaWeb3.Connection(SolanaWeb3.clusterApiUrl("mainnet-beta"));
-
-        console.log(conn)
-        */
-        
-        //const blockhash = await conn.getLatestBlockhash()
-
-        //console.log({ blockhash })
-
-        // create v0 compatible message
-        /*const messageV0 = new provider.TransactionMessage({
-          payerKey: sender,
-          recentBlockhash: blockhash,
-          instructions,
-        }).compileToV0Message();
-
-        // make a versioned transaction
-        const transactionV0 = new provider.VersionedTransaction(messageV0);
-
-        console.log({ transactionV0 })*/
-
-
-    } catch (err) {
-
-      console.error(err)
-        // { code: 4001, message: 'User rejected the request.' }
-    }
-  }
-
-  async function phantomSolanaPayUSDT() {
-
-    const phantom = getProvider()
-
-  }
-
   async function payUSDC(address: string, amount: number, token: string, chain: string, currency: string='USDC'): Promise<any> {
 
-    let _web3 = new Web3(provider)
+    const _web3 = new Web3(provider)
 
-    let tokenAddress = token;
+    const tokenAddress = token;
 
-    let toAddress = address;
+    const toAddress = address;
 
-    let fromAddress = String(metamaskAccount);
+    const fromAddress = String(metamaskAccount);
 
-    let value = _web3.utils.toBN(amount);
+    const value = _web3.utils.toNumber(amount);
 
-    let minABI: any = [
+    const minABI: any = [
       // transfer
       {
         "constant": false,
@@ -530,11 +392,11 @@ const [selectedCoin, setSelectedCoin] = useState(defaultSelectorOption.value);
         "type": "function"
       }
     ];// Get ERC20 Token contract instance
-    let contract = new _web3.eth.Contract(minABI, tokenAddress);// calculate ERC20 token amount
+    const contract = new _web3.eth.Contract(minABI, tokenAddress);// calculate ERC20 token amount
 
-    const transfer = contract.methods.transfer(toAddress, value)
+    const transfer = (contract.methods.transfer as any)(toAddress, value)
 
-    const transferResult = await transfer.call({ from: fromAddress })
+    await transfer.call({ from: fromAddress })
 
     const encoded = transfer.encodeABI()
 
@@ -546,7 +408,7 @@ const [selectedCoin, setSelectedCoin] = useState(defaultSelectorOption.value);
 
     const url = anypay.state.invoice.uri.split("r=")[1]
 
-    const result = await submitPayment({
+    return submitPayment({
       url,
       chain,
       currency,
@@ -557,13 +419,13 @@ const [selectedCoin, setSelectedCoin] = useState(defaultSelectorOption.value);
 
   async function payETH({address, amount, chain}: {address: string, amount: number, chain: string}): Promise<void> {
 
-    let _web3 = new Web3(provider)
+    const _web3 = new Web3(provider)
 
-    let toAddress = address;
+    const toAddress = address;
 
-    let fromAddress = String(metamaskAccount);
+    const fromAddress = String(metamaskAccount);
 
-    let value = _web3.utils.toBN(amount);
+    const value = _web3.utils.toNumber(amount);
 
     console.log(`pay ${chain}`, { amount, value, toAddress, fromAddress })
 
@@ -620,29 +482,6 @@ const [selectedCoin, setSelectedCoin] = useState(defaultSelectorOption.value);
 
   }
 
-  async function payMATIC() {
-
-    if (!maticOption) { return }
-
-    try {
-
-      await ensureChain('POLYGON_MAINNET')
-
-      const result = await payETH({
-        address: maticOption.instructions[0].outputs[0].address,
-        amount: maticOption.instructions[0].outputs[0].amount,
-        chain: "MATIC",
-      })
-
-      console.log('payPolygonUSDTMetamask.result', result)
-
-    } catch(error) {
-
-      console.error('payPolygonUSDTMetamask.error', error)
-
-    }
-
-  }
 
   async function payPolygonUSDCMetamask() {
 
@@ -669,10 +508,6 @@ const [selectedCoin, setSelectedCoin] = useState(defaultSelectorOption.value);
 
     }
 
-  }
-
-  async function payHandCash() {
-    window.open(anypay.state.invoice.uri);
   }
 
   async function payWithLink() {
@@ -747,24 +582,6 @@ const [selectedCoin, setSelectedCoin] = useState(defaultSelectorOption.value);
                  amount;
 
     window.open(link);
-  }
-
-  async function getPaymentOption({ url, currency, chain }: {
-    url: string,
-    currency: string,
-    chain: string
-  }): Promise<any> {
-
-    const { data } = await axios.post(url, { chain, currency }, {
-
-      headers: {
-
-        'content-type': 'application/payment-request'
-
-      }
-
-    })
-
   }
 
   async function submitPayment({ url, txhex, currency, chain }: {

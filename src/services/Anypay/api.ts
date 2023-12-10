@@ -56,7 +56,7 @@ export type IApiServiceStatusPoll = {
   callback: (payload: any) => void
 }
 
-export type IApiServiceStatusPollResponse = NodeJS.Timer
+export type IApiServiceStatusPollResponse = NodeJS.Timeout
 
 const MERCHANT_API_KEY = '43b5f322-4eb7-487d-b8ba-3a0fbfe3235b'
 
@@ -87,12 +87,6 @@ const ApiService = () => {
         'accept': 'application/payment-options'
       }
     })
-    return request.data
-  }
-
-  // @ts-ignore
-  const paymentOptionsGet = async ({ invoiceId }: IApiServicePaymentOptionsGet) : IApiServicePaymentOptionsGetResponse => {
-    const request = await instance.get(`/r/${invoiceId}`)
     return request.data
   }
 
